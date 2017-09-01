@@ -88,13 +88,10 @@ class Model():
                     for j in range(len(layer)):
                         error = 0.0
                         for neuron in network[i + 1]:
-                            error = (neuron * neuron)
-
-        def learn(network):
-            pass            
-
+                            error = (neuron[0]['weights'] * neuron)
+        
 	def activated(weight, neuron):
-		pass
+            pass
 
 	def predict(state, epsilon):
 		x = forward_feed(state)
@@ -133,7 +130,7 @@ class Ada:
 		act_values = self.model.predict(state)
 		return np.argmax(act_values[0])
 
-	def replay(self, batch_size):
+	def learn(self, batch_size):
 		minibatch = random.sample(self.memory, batch_size)
 		for state, action, reward, next_state, done in minibatch:
 			target = self.model.predict(state)
@@ -146,11 +143,6 @@ class Ada:
 			self.model.fit(state, target, epochs=1, verbose=0)
 		if self.epsilon > self.epsilon_min:
 			self.epsilon *= self.epsilon_decay
-
-
-
-
-
 
 	def load(self, name):
 		self.model.load_weights(name)
@@ -166,13 +158,14 @@ if __name__ == "__main__":
 	action_size = env.action_space
 	print action_size
         print state_size
-	agent = Ada(state_size, 4)
+#	agent = Ada(state_size, 4)
 	done = False
 	batch_size = 64
 	for e in range(EPISODES):
 		env.render()
 		state = env.reset()
-                print state
+                for i in state:
+                    print i
 		state = np.reshape(state, [1, state_size])
 		env.render()
 		for time in range(500):
@@ -187,4 +180,4 @@ if __name__ == "__main__":
 				print("episode: {}/{}, score: {}, e: {:2}".format(e, EPISODES, time, agent.epsilon))
 				break
 		if len(agent.memory) > batch_size:
-			agent.replay(batch_size)
+			agent.learn(batch_size)
