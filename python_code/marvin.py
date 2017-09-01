@@ -19,43 +19,17 @@ class Model():
 		self.actions = actions
 		self.states = states
 
-'''	def _build_input_layer(self, states, network):
-		for s in range(states):
-			#print s	
-			input_vector.append([density])
-			for d in range(density):
-				print density
-				print d				
-				input_vector[s].append(random.random())
-		return input_vector
-
-	def _build_output_layer(self, actions, density):
-		output_vector = [density]
-		for d in range(denisty):
-			output_vector.append([actions])
-			for a in range(actions):
-				output_vector[d].append(random.random())
-		return output_vector
-
-	def _build__hidden_layers(neurons, weights):
-		hidden_network = [neurons]
-		for n in range(neurons):
-			hidden_network.append([weights])
-			for w in range(len(weights)):
-				hidden_network[n].append(random.random())
-		return hidden_network''' # DON'T EVEN NEED IT
-
 	def _build_network(self, layers, density, actions, states):
 		network = []
 		neurons = density
-		i = 1	
+		i = 1
 #		print "ACTIONS: ", actions
 		for l in range(layers + 2):
 			network.append([])
 		for s in range(states):
 #			print s
 			network[0].append([])
-			for d in range(density):	
+			for d in range(density):
 				network[0][s].append(random.random())
 		while i < layers:
 			network.append([])
@@ -73,35 +47,36 @@ class Model():
 				network[i][d].append(random.random())
 		return network
 
-	def layers(self)
+	def layers(self):
 		return self._layers
 
 	def ReLU(x):
 	    return x * (x > 0)
-	
+
 	def forward_feed(self, state):
 		input_vector = state
 		for layer in self.network:
 			output_vector = np.dot(input_vector, self.network[layer])
 			input_vector = np.tanh(output_vector)
-		
+
 	def update_weights(self):
-		for layers in range(self.layers)
-			self.network[layers] -= LAMBDA * 
+		for layers in range(self.layers):
+			self.network[layers] -= LAMBDA * 1
 
 	def back_prop(self):
 		delta = 0
-		delta = np.multiply(-())	
-	
+		delta = np.multiply(-())
+
 	def activated(weight, neuron):
 		pass
-	
+
 	def predict(state, epsilon):
-		return x = forward_feed(state):
+		x = forward_feed(state)
+		return x
 		#if random.random() <= epsilon:
 		#		if activated(weight, neuron):
 		#			sum_total += 1
-		
+
 
 class Ada:
 	def __init__(self, state_size, action_size):
@@ -115,13 +90,13 @@ class Ada:
 		self.model = self._build_model()
 		self.target_model = self._build_model()
 		self.update_target_model()
-	
+
 	def _huber_loss(self, target, prediction):
 		error = prediction - target
 		return K.mean(K.sqrt(1 + K.square(error)) - 1, axis = -1)
 
 	def _build_model(self):
-		model = Model(HIDDEN_LAYERS + 2, NEURAL_DENSITY, self.action_size, self.state_size)	
+		model = Model(HIDDEN_LAYERS + 2, NEURAL_DENSITY, self.action_size, self.state_size)
 		#model = Sequential()
 		#model.add(Dense(24, input_dim=self.state_size, activation='relu'))
 		#model.add(Dense(24, activation='relu'))
@@ -130,11 +105,11 @@ class Ada:
 		return model
 
 	def update_target_model(self):
-		self.target_model.back_prop():
-	
+		self.target_model.back_prop()
+
 	def remember(self, state, action, erward, next_state, done):
 		self.memory.append((state, action, reward, next_state, done))
-	
+
 	def act(self, state):
 		if np.random.rand() <= self.epsilon:
 			return random.randrange(self.action_size)
@@ -176,7 +151,7 @@ if __name__ == "__main__":
 	agent = Ada(state_size, 4)
 	done = False
 	batch_size = 64
-	for e in range(EPISODES):		
+	for e in range(EPISODES):
 		env.render()
 		state = env.reset()
 		state = numpy.reshape(state, [1, state_size])
@@ -194,4 +169,3 @@ if __name__ == "__main__":
 				break
 		if len(agent.memory) > batch_size:
 			agent.replay(batch_size)
-	
