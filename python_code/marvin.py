@@ -4,180 +4,146 @@ import random
 from collections import deque
 import math
 import copy
+import sys
 
 EPISODES = 5000
 DEQUE = 2000
-LAMBDA = 0.01
+EPSILON = 0.99
+LAMBDA = 0.95
+EPSILON_BASE = 0.01
 HIDDEN_LAYERS = 2
 NEURAL_DENSITY = 5
 
+class Neuron:
+	def __init__(self):
+		self.input = 0.0
+		self.output = 0.0
 
-class Model():
-	def __init__(self, layers, density, actions, states):
-		self.network = self._build_network(layers, density, actions, states)
-		self.density = density
-		self.layers = layers
-		self.density = density
-		self.actions = actions
-		self.states = states
+	def input(self):
+		return self._input
 
-	def _build_network(self, layers, density, actions, states):
-		network = []
-		neurons = density
-		i = 1
-#		print "ACTIONS: ", actions
-		for l in range(layers + 2):
-			network.append([])
-		for s in range(states):
-#			print s
-			network[0].append([])
-			for d in range(density):
-                            dictionary = {'delta': 0.0, 'weights': []}
-                            network[0][s].append(copy.deepcopy(dictionary))
-#                           print network[0][s][0]['delta']
-                            for n in range(density):
-                                   network[0][s][0]['weights'].append(random.uniform(-1, 1))
-		while i < layers:
-			network.append([])
-			for n in range(neurons):
-				network[i].append([])
-			        for d in range(density):
-                                    dictionary = {'delta': 0.0, 'weights': []}
-                                    network[i][n].append(copy.deepcopy(dictionary))
-                                    for s in range(neurons):
-                                        network[i][n][0]['weights'].append(random.uniform(-1, 1))
-			i += 1
-		network.append([])
-#		print density
-		for d in range(density):
-#			print "d", d
-			network[i].append([])
-			for a in range(actions):
-                            dictionary = {'delta': 0.0, 'weights': []}
-                            network[i][d].append(copy.deepcopy(dictionary))
-                            for n in range(density):
-				network[i][d][0]['weights'].append(random.uniform(-1, 1))
-		return network
+	def output(self):
+		return self._output
 
-	def layers(self):
-		return self._layers
 
-	def ReLU(x):
-	    return x * (x > 0)
-
-	def forward_feed(self, state):
-		input_vector = state
-		for layer in self.network:
-			output_vector = np.dot(input_vector, self.network[layer])
-			input_vector = np.tanh(output_vector)
-
-	def update_weights(self):
-		for layers in range(self.layers):
-			self.network[layers] -= LAMBDA * 1
-
-        def derivative(output):
-            if output > 0:
-                return output
-            return 0
-
-        def back_prop(network):
-            for l in reversed(range(len(network))):
-                layer = network[l]
-                errors = []
-                if i != len(network):
-                    for j in range(len(layer)):
-                        error = 0.0
-                        for neuron in network[i + 1]:
-                            error = (neuron[0]['weights'] * neuron)
-        
-	def activated(weight, neuron):
-            pass
-
-	def predict(state, epsilon):
-		x = forward_feed(state)
-		return x
 
 class Ada:
-	def __init__(self, state_size, action_size):
-		self.state_size = state_size
-		self.action_size = action_size
-		self.memory = deque(maxlen=DEQUE)
-		self.gamma = 0.95
-		self.epsilon = 0.99
-		self.epsilon_min = 0.01
-		self.epsilon_decay = 0.99
-		self.model = self._build_model()
-		self.target_model = self._build_model()
-		self.update_target_model()
+	def __init__(self, states, actions, layers, density):
+		self.actions = actions
+		self.states = states
+		self.layers = layers
+		self.network = self._construct_network(states, actions, layers, density)
+		self.epsilon = EPSILON
+		self.e_decay = LAMBDA
+		self.e_base = EPSILON_BASE
+	def layers(self):
+		return self._layers
+	def epsilon(self):
+		return self._epsilon
+	def e_decay(self):
+		return self._e_decay
+	def e_base(self):
+		return self._e_base
 
-#	def _huber_loss(self, target, prediction):
-#		error = prediction - target
-#		return np.mean(math.sqrt(1 + math.square(error)) - 1, axis = -1)
+	def _construct_network(self, states, actions, layers, density):
+		network = []
+		network.append({'neurons': [], 'weights': []})
+		for s in range(states):
+			network[0]['neurons'].append(Neuron())
+			network[0]['weights'].append([])
+			for d in range(density):
+				network[0]['weights'][s].append(random.random())
+				#print "THIS MANY WEIGHTS > ", d
+		l = 1
+		while l <= layers:
+			network.append({'neurons': [], 'weights': []})
+			for d in range(density):
+				network[l]['neurons'].append(Neuron())
+				network[l]['weights'].append([])
+				for n in range(density):
+					network[l]['weights'][d].append(random.random())
+			l += 1
+		network.append({'neurons': [], 'weights': []})
+		for a in range(actions):
+			network[l]['neurons'].append(Neuron())
+			network[l]['weights'].append([])
+			for d in range(density):
+				network[l]['weights'][a].append(random.random())
+		return network
 
-	def _build_model(self):
-		model = Model(HIDDEN_LAYERS + 2, NEURAL_DENSITY, self.action_size, self.state_size)
-		return model
+	def forward_propogate(self, network, state):
+		d = 0
+		ret = []
+		s = 0
+		#print "length?? ", len(state[0])
+		while s < len(state[0]):
+			network[0]['neurons'][s].output = state[0][s]
+			#print network[0]['neurons'][s].output
+			s += 1
+		#print "STATE : ", state
+		while d <= self.layers:
+			for n in range(len(network[d + 1]['neurons'])): # OUTSIDE LOOP IS CYCLING THROUGH EACH NEURON IN THE NEXT LAYER
+				dot_product = 0.0
+				for w in range(len(network[d]['neurons'])): # INSIDE LOOP IS CYCLING THROUGH EACH NEURON IN THE FIRST LAYER
+					#print "n, w : ", n, w
+					dot_product += network[d]['weights'][w][n] * network[d]['neurons'][w].output
+				network[d + 1]['neurons'][n].output = self.ReLU(dot_product)
+				print "dot product : ", dot_product
+				print n
+			d += 1
+			#print "LAYER : ", d
+		for n in range(len(network[d]['neurons'])):
+			ret.append(network[d]['neurons'][n].output)
+		return ret
 
-	def update_target_model(self):
-		self.target_model.learn(self.target_model.network)
+	def ReLU(self, x):
+		if x > 0:
+			return x
+		return 0
 
-	def remember(self, state, action, erward, next_state, done):
-		self.memory.append((state, action, reward, next_state, done))
+	def predict(self, state):
+		#if np.random.rand() <= self.epsilon:
+		#	return random.randrangeself.actions)
+		potential = self.forward_propogate(self.network, state)
+		#print potential
+		return potential
 
 	def act(self, state):
-		if np.random.rand() <= self.epsilon:
-			return random.randrange(self.action_size)
-		act_values = self.model.predict(state)
-		return np.argmax(act_values[0])
-
-	def learn(self, batch_size):
-		minibatch = random.sample(self.memory, batch_size)
-		for state, action, reward, next_state, done in minibatch:
-			target = self.model.predict(state)
-			if done:
-				target[0][action] = reward
-			else:
-				a = self.model.predict(next_state)[0]
-				t = self.target_model.predict(next_state)[0]
-				target[0][action] = reward + self.gamma * t[np.argmax(a)]
-			self.model.fit(state, target, epochs=1, verbose=0)
-		if self.epsilon > self.epsilon_min:
-			self.epsilon *= self.epsilon_decay
-
-	def load(self, name):
-		self.model.load_weights(name)
-
-	def save(self, name):
-		self.model.save_weights(name)
-
-
+		action = self.predict(state)
+		print "ACTION TAKEN : ", action
+		return action
 
 if __name__ == "__main__":
-	env = gym.make('Marvin-v0')
+	random.seed(42)
+	env = gym.make('BipedalWalker-v2')
 	state_size = env.observation_space.shape[0]
 	action_size = env.action_space
-	print action_size
-        print state_size
-#	agent = Ada(state_size, 4)
+	#print action_size
+	#print state_size
+	agent = Ada(state_size, 4, HIDDEN_LAYERS, 64)
 	done = False
 	batch_size = 64
 	for e in range(EPISODES):
-		env.render()
 		state = env.reset()
-                for i in state:
-                    print i
+
+		'''action = env.action_space.sample()
+		print "ACTION : ", action
+		observation, reward, done, info = env.step(action)
+		sys.exit(1)'''
 		state = np.reshape(state, [1, state_size])
-		env.render()
 		for time in range(500):
-			action = agent.act(state, agent.epsilon)
-			next_state, reward, done, _ = env.step(action)
+			c = []
+			action = agent.act(state)
+			#c.append(action)
+			observation, reward, done, _ = env.step(c)
 			reward = reward if not done else -10
-			next_state = np.reshape(next_state, [1, state_size])
-			agent.remember(state, action, reward, next_state, done)
-			state = next_state
+			observation = np.reshape(observation, [1, state_size])
+			agent.remember(state, action, reward, observation, done)
+			state = observation
 			if done:
 				agent.update_target_model()
 				print("episode: {}/{}, score: {}, e: {:2}".format(e, EPISODES, time, agent.epsilon))
 				break
+		env.render()
 		if len(agent.memory) > batch_size:
 			agent.learn(batch_size)
