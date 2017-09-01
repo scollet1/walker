@@ -3,6 +3,8 @@ import numpy as np
 import random
 from collections import deque
 import math
+import copy
+
 EPISODES = 5000
 DEQUE = 2000
 LAMBDA = 0.01
@@ -30,13 +32,20 @@ class Model():
 #			print s
 			network[0].append([])
 			for d in range(density):
-				network[0][s].append(random.random())
+                            dictionary = {'delta': 0.0, 'weights': []}
+                            network[0][s].append(copy.deepcopy(dictionary))
+#                           print network[0][s][0]['delta']
+                            for n in range(density):
+                                   network[0][s][0]['weights'].append(random.uniform(-1, 1))
 		while i < layers:
 			network.append([])
 			for n in range(neurons):
 				network[i].append([])
-			for d in range(density):
-				network[i][n].append(random.random())
+			        for d in range(density):
+                                    dictionary = {'delta': 0.0, 'weights': []}
+                                    network[i][n].append(copy.deepcopy(dictionary))
+                                    for s in range(neurons):
+                                        network[i][n][0]['weights'].append(random.uniform(-1, 1))
 			i += 1
 		network.append([])
 #		print density
@@ -44,7 +53,10 @@ class Model():
 #			print "d", d
 			network[i].append([])
 			for a in range(actions):
-				network[i][d].append(random.random())
+                            dictionary = {'delta': 0.0, 'weights': []}
+                            network[i][d].append(copy.deepcopy(dictionary))
+                            for n in range(density):
+				network[i][d][0]['weights'].append(random.uniform(-1, 1))
 		return network
 
 	def layers(self):
@@ -63,9 +75,23 @@ class Model():
 		for layers in range(self.layers):
 			self.network[layers] -= LAMBDA * 1
 
-	def back_prop(self):
-		delta = 0
-		delta = np.multiply(-())
+        def derivative(output):
+            if output > 0:
+                return output
+            return 0
+
+        def back_prop(network):
+            for l in reversed(range(len(network))):
+                layer = network[l]
+                errors = []
+                if i != len(network):
+                    for j in range(len(layer)):
+                        error = 0.0
+                        for neuron in network[i + 1]:
+                            error = (neuron * neuron)
+
+        def learn(network):
+            pass            
 
 	def activated(weight, neuron):
 		pass
@@ -73,10 +99,6 @@ class Model():
 	def predict(state, epsilon):
 		x = forward_feed(state)
 		return x
-		#if random.random() <= epsilon:
-		#		if activated(weight, neuron):
-		#			sum_total += 1
-
 
 class Ada:
 	def __init__(self, state_size, action_size):
@@ -91,21 +113,16 @@ class Ada:
 		self.target_model = self._build_model()
 		self.update_target_model()
 
-	def _huber_loss(self, target, prediction):
-		error = prediction - target
-		return K.mean(K.sqrt(1 + K.square(error)) - 1, axis = -1)
+#	def _huber_loss(self, target, prediction):
+#		error = prediction - target
+#		return np.mean(math.sqrt(1 + math.square(error)) - 1, axis = -1)
 
 	def _build_model(self):
 		model = Model(HIDDEN_LAYERS + 2, NEURAL_DENSITY, self.action_size, self.state_size)
-		#model = Sequential()
-		#model.add(Dense(24, input_dim=self.state_size, activation='relu'))
-		#model.add(Dense(24, activation='relu'))
-		#model.add(Dense(self.action_size, activation='linear'))
-		#model.compile(loss=self._huber_loss, optimizer=Adam(lr=self.learning_rate))
 		return model
 
 	def update_target_model(self):
-		self.target_model.back_prop()
+		self.target_model.learn(self.target_model.network)
 
 	def remember(self, state, action, erward, next_state, done):
 		self.memory.append((state, action, reward, next_state, done))
@@ -148,13 +165,15 @@ if __name__ == "__main__":
 	state_size = env.observation_space.shape[0]
 	action_size = env.action_space
 	print action_size
+        print state_size
 	agent = Ada(state_size, 4)
 	done = False
 	batch_size = 64
 	for e in range(EPISODES):
 		env.render()
 		state = env.reset()
-		state = numpy.reshape(state, [1, state_size])
+                print state
+		state = np.reshape(state, [1, state_size])
 		env.render()
 		for time in range(500):
 			action = agent.act(state, agent.epsilon)
