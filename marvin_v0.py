@@ -23,9 +23,10 @@ EPSILON_BASE = 0.01
 HIDDEN_LAYERS = 3
 NEURAL_DENSITY = 5
 GAMMA = 0.95
-LEARNING_RATE = 0.04
+LEARNING_RATE = 0.08
 GRADE = 1.0
-SCORE_CEILING = 1
+SCORE_CEILING = 0
+
 
 # class Neuron:
 # 	def __init__(self):
@@ -312,15 +313,19 @@ def train_network(network, train, l_rate, n_epoch, n_outputs, batch_size):
 				# thing = obs[i]
 				# if action[i] > obs[i]:
 					# thing = action[i]
-				action[i] = (hold[i] + (((((out[i]*2)+(GRADE*random()))/3)-hold[i]) * (reward / SCORE_CEILING)))
+				hold = np.argmax(action)
+				this = action[i] + ((((out[i]+(outputs[i]*2)+random()+random())/5)-((action[hold]+random()+random())/3)) * ((reward / SCORE_CEILING) + (1.0*GRADE)))
 				if action[i] < 0:
 					action[i] = 0.00
 				elif action[i] > 1:
 					action[i] = 0.99
+				# print "stepsize = ", action[hold] - this
+				action[i] = this
 				# tmp = action[i]**2
 				# action[i] = math.sqrt(tmp)
 				# print action[i]
 			# print "SECOND ", action
+			# print action
 			backward_propagate_error(network, action)
 			update_weights(network, row, l_rate)
 			batch_size -= 1
@@ -334,7 +339,7 @@ def predict(network, row):
 	return outputs
 
 def save_net(network):
-	f = open('BipedalWalker-v2_weights.csv', 'w')
+	f = open('BipedalWalker-v2_weights1.csv', 'w')
 	writer = csv.writer(f, delimiter = ',')
 	for layer in range(len(network)):
 		for neuron in network[layer]:
@@ -346,8 +351,8 @@ def save_net(network):
 def load_net(state_size, actions):
 	network = initialize_network(state_size, 64, actions)
 	weights = []
-	if os.path.isfile('BipedalWalker-v2_weights.csv'):
-		f = open('BipedalWalker-v2_weights.csv', 'rb')
+	if os.path.isfile('BipedalWalker-v2_weights1.csv'):
+		f = open('BipedalWalker-v2_weights1.csv', 'rb')
 		reader = csv.reader(f, delimiter=',')
 		# for i in f:
 			# weights.append(i)
@@ -376,7 +381,7 @@ if __name__ == "__main__":
 	best_score = -1000000
 	run_time = 1000
 	memory = deque(maxlen=20000)
-	grade = 100.0
+	# grade = 100.0
 	value = 0.50
 	while (t_time):
 		e += 1
@@ -387,6 +392,8 @@ if __name__ == "__main__":
 		sys.exit(1)'''
 		state = np.reshape(state, [1, state_size])
 		total_reward = 0
+		on = 1
+		random_goal = [random() for i in range(actions)]
 		for time in range(run_time):
 			# state_ = np.reshape(state, [1, state_size])
 			env.render()
@@ -399,9 +406,10 @@ if __name__ == "__main__":
 			# print action
 			if bootstrap > 0:
 				bootstrap -= 1
-				for a in range(len(action)):
-					if random() < GRADE:
-						action[a] = random()
+				if time % ((randint(1, run_time) / 4) + 1) == 0 or (random()+(random()*GRADE))/2 < GRADE:
+					for a in range(len(action)):
+						action[a] = (random_goal[a]*3 + action[a]*7)/10
+					# action[4] = random()
 					# if action[a] < 0.04:
 						# action[a] = 0.04
 					# elif action[a] > CEILING:
@@ -416,12 +424,30 @@ if __name__ == "__main__":
 				\____/  \___/  \___/   \_/  \____/   \_/  \_| \_|\_| |_/\_|    \_|     \___/ \_| \_/ \____/    \_|    \_| |_/\_| |_/\____/ \____/    \____/ \___/ \_|  |_/\_|    \_____/\____/   \_/  \____/ (_)\
 				\n\n\n\n\n\n\n"
 				bootstrap = -1
-			print action
+			# print action
 			#c = [0.25, 0.25, 0.25, 0.25]
+			# if action[4] > 0.95 and on:
+				# action[4] = 1.00
+			# elif action[4] < 0.05 and not on:
+				# action[4] = 0.00
 			observation, reward, done, _ = env.step(action)
 			# observation[4] = 10
-			#print action
-			reward = reward if not done else -10
+			# print action
+			reward = reward if not done else -101
+			print action
+			# print observation[9], observation[4]
+			# if observation[4] >= 0.40 and observation[9] <= -0.10 and observation[8] == 1.0 and observation[13] == 1.0:
+				# reward += 3 * (1 / GRADE)
+				# on = 1
+			# elif observation[4] <= -0.70 and observation[9] >= 1.00 and observation[8] == 1.0 and observation[13] == 1.0:
+				# reward += 3 * (1 / GRADE)
+				# on = 0
+			# if observation[3] >= 0.89 and observation[2] > 0.10:# and observation[8] and observation[13]:
+				# reward += 1 * (1 / GRADE)
+				# on = randint(0, 2)
+			# else:
+				# reward -= 2 * (1 / GRADE)
+				# on = randint(0, 2)
 			# if action[4] - 0.5 < value:
 				# reward -= grade
 			observation = np.reshape(observation, [1, state_size])
@@ -439,9 +465,9 @@ if __name__ == "__main__":
 						SCORE_CEILING = best_score
 				break
 		t_time -= 1
-		GRADE *= 0.95
-		if len(memory) > 1000 and randint(0, 101) < 50:
+		if len(memory) > batch_size and randint(35, 101) < 50:
 			print "LEARNING ---"
+			GRADE *= 0.99
 			train_network(network, memory, LEARNING_RATE, 1, actions, batch_size)
 			save_net(network)
 	print "Episodes : ", t_time / run_time, " Best Score : ", best_score
