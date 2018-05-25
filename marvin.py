@@ -19,7 +19,7 @@ EPSILON_BASE = 0.01
 HIDDEN_LAYERS = 3
 NEURAL_DENSITY = 5
 GAMMA = 0.95
-LEARNING_RATE = 0.04
+LEARNING_RATE = 0.95
 MAX_REWARD = 1
 
 # class Neuron:
@@ -243,14 +243,14 @@ def forward_propagate(network, row):
 			new_inputs.append(neuron['output'])
 		inputs = new_inputs
         global LEARNING_RATE
-        #if random() > LEARNING_RATE:
-	return inputs
-        #return [random() for i in range(len(inputs))]
+        if random() > LEARNING_RATE:
+	    return inputs
+        return [((random() + inputs[i]) / 2) for i in range(len(inputs))]
 
 def transfer_derivative(x):
-	return transfer(x) * (1 - transfer(x))
+	return x * (1 - x)
 
-def backward_propagate_error(network, example, timeStep):
+def backward_propagate_error(network, example, timeStep, discount):
 	for i in reversed(range(len(network))):
 		layer = network[i]
 		errors = list()
@@ -263,12 +263,13 @@ def backward_propagate_error(network, example, timeStep):
 		else:
 				for j in range(len(layer)):
 					neuron = layer[j]
-					err = (1 - (((MAX_REWARD - (example[2])) / MAX_REWARD) * (example[1][j] / len(layer)))) - example[1][j]
+					err = (1 - ((((example[2] * discount)) / MAX_REWARD) * (example[1][j] / len(layer)))) - example[1][j]
 				# print err
 				# err2 = err**2
 				# err = math.sqrt(err2)
 				# print err
 					errors.append(err)
+                                        discount *= discount
 				# this = expected - reward
 				# errors.append(math.sqrt(1 + (this * this)) - 1)
                                 print ("errors === ", errors)
@@ -276,6 +277,7 @@ def backward_propagate_error(network, example, timeStep):
 		for j in range(len(layer)):
 			neuron = layer[j]
 			neuron['delta'] = errors[j] * transfer_derivative(neuron['output'])
+        return discount
 
 # Update network weights with error
 def update_weights(network, row, l_rate):
@@ -292,8 +294,9 @@ def update_weights(network, row, l_rate):
 def train_network(network, train, l_rate, n_epoch, n_outputs):
 	for epoch in range(n_epoch):
 		sum_error = 0
-		for each, example in enumerate(train):
-			expected = []
+                discount = 0.99
+                for each, example in enumerate(train):
+                        expected = []
 			row = example[0]
 			action = example[1]
 			reward = example[2]
@@ -315,11 +318,11 @@ def train_network(network, train, l_rate, n_epoch, n_outputs):
 				# action[i] = math.sqrt(tmp)
 				# print action[i]
 			# print "SECOND ", action
-			backward_propagate_error(network, example, each)
+			discount = backward_propagate_error(network, example, each, discount)
 			update_weights(network, row, l_rate)
 		# print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, l_rate, expected[0]))
-        #global LEARNING_RATE
-        #LEARNING_RATE *= 0.95
+        global LEARNING_RATE
+        LEARNING_RATE *= 0.95
 
 # Make a prediction with a network
 def predict(network, row):
